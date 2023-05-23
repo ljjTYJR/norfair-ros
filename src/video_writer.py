@@ -75,6 +75,22 @@ class VideoWriter:
 
         self.video.write(cv_image)
 
+    def test_pub(self, image: Image, detections: DetectionsMsg):
+        drawables = []
+        for detection in detections.detections:
+            drawables.append(
+                Drawable(
+                    points=np.array([point.point for point in detection.points]),
+                    # label=detection.label,
+                    # id=detection.id,
+                    # scores=np.array(detection.scores),
+                )
+            )
+
+        cv_image = self.bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
+
+        self.tracker_camera_pub.publish(image_msg)
+
     def main(self):
         """
         If output_path is not empty, it will write the output video to a file, indicated by the output_path parameter.
@@ -82,22 +98,36 @@ class VideoWriter:
         subscribers = rospy.get_param("video_writer_subscribers")
         camera_reading = subscribers["camera_reading"]
         norfair_detections = subscribers["detections"]
+        video_publisher = rospy.get_param("video_publisher")
+        self.tracker_camera_topic = video_publisher["tracker_camera"]["topic"]
+        self.tracker_camera_pub = rospy.Publisher(self.tracker_camera_topic, Image, queue_size=10)
 
         self.bridge = CvBridge()
         output_path = rospy.get_param("output_path")
 
         self.video = self.get_video_writer(output_path, camera_reading)
 
-        if output_path:
-            rospy.init_node("video_writer")
+        if self.tracker_camera_topic:
+            rospy.init_node("tracked_publisher")
 
             image_sub = message_filters.Subscriber(camera_reading["topic"], Image)
             detections_sub = message_filters.Subscriber(norfair_detections["topic"], DetectionsMsg)
 
-            ts = message_filters.TimeSynchronizer([image_sub, detections_sub], 2)
-            ts.registerCallback(self.write_video)
+            ts = message_filters.TimeSynchronizer([image_sub, detections_sub], 10)
+            ts.registerCallback(self.test_pub)
 
             rospy.spin()
+
+        # if output_path:
+        #     rospy.init_node("video_writer")
+
+        #     image_sub = message_filters.Subscriber(camera_reading["topic"], Image)
+        #     detections_sub = message_filters.Subscriber(norfair_detections["topic"], DetectionsMsg)
+
+        #     ts = message_filters.TimeSynchronizer([image_sub, detections_sub], 2)
+        #     ts.registerCallback(self.write_video)
+
+        #     rospy.spin()
 
 
 if __name__ == "__main__":

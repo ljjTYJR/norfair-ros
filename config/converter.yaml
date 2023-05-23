@@ -1,6 +1,10 @@
 converter_subscribers:
   darknet:
     topic: "darknet_ros/bounding_boxes"
+  darko:
+    topic: "perception/scene_objects"
+  jsk:
+    topic: "/robot/k4a_bottom/rgbd_yolo_9dof_ros/bboxes3d"
 
 converter_publishers:
   output:

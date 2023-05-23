@@ -9,9 +9,9 @@ norfair_publishers:
 
 norfair_setup:
   distance_function: "iou_opt"
-  distance_threshold: 0.9
+  distance_threshold: 0.5
   hit_counter_max: 15
   initialization_delay: 7.5
-  pointwise_hit_counter_max: 4
-  detection_threshold: 0.01
+  pointwise_hit_counter_max: 2
+  detection_threshold: 0.02
   past_detections_length: 4

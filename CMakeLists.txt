@@ -7,11 +7,12 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   message_generation
+  geometry_msgs
 )
 
 add_message_files(
   FILES
-    Detection.msg 
+    Detection.msg
     Detections.msg
     Point.msg
     BoundingBox.msg
@@ -21,6 +22,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
     std_msgs
+    geometry_msgs
 )
 
 catkin_package(

@@ -1,11 +1,17 @@
 video_writer_subscribers:
   camera_reading:
-    topic: "camera/rgb/image_raw"
-    fps: 30
-    width: 1280
-    height: 720
+    # topic: "camera/rgb/image_raw"
+    topic: "/robot/k4a_bottom/rgb_to_depth/image_raw"
+    fps: 15
+    width: 1024
+    height: 1024
 
   detections:
     topic: "norfair/output"
 
-output_path: "/root/catkin_ws/src/publisher/src/example_out.mp4"
+output_path: "/home/ros/catkin_ws/src/darko/example_out.mp4"
+
+video_publisher:
+  tracker_camera:
+    topic: "tracked_bounding_boxes"
+
