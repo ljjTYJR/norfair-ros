@@ -155,7 +155,6 @@ def draw_3d_tracked_boxes(
 
         # sort the points to draw the lines
         sorted_points = np.array([pixel_points[index] for index in CONNECTED_INDEXES])
-        print(sorted_points.astype(np.int32).reshape((-1, 1, 2)))
 
         # draw box
         if draw_box:
@@ -188,7 +187,7 @@ def scaled_euclidean(detection: "Detection", tracked_object: "TrackedObject") ->
     See `np.linalg.norm`.
     """
     obj_estimate = tracked_object.estimate
-    diagonal = np.linalg.norm(obj_estimate[1] - obj_estimate[8])
+    diagonal = np.linalg.norm(obj_estimate[2] - obj_estimate[8])
     return np.linalg.norm(detection.points - obj_estimate, axis=1).mean() / diagonal
 
 def quaterion_to_rotation_matrix(q):
@@ -210,6 +209,15 @@ def pose_dimensions_to_bounding_box_points(pose, dimensions):
     Takes a Pose and dimensions and returns the 8 points of the bounding box
     p0: center of the box
     The coordinates is the global frame
+         5--------8
+        /        /|
+       /        / |
+      6--------7  |
+      |        |  4
+      |        | /
+      |        |/
+      2--------3
+      The hidden one is 1
     """
     xmin = -1 * dimensions.x / 2
     xmax = 1 * dimensions.x / 2

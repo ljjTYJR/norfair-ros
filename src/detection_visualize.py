@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
-"""
-subscribe the
-    Image topic: "/robot/k4a_bottom/rgb_to_depth/image_raw"
-    Detections topic: "/robot/k4a_bottom/rgbd_yolo_9dof_ros/bboxes3d"
-and project the 3D bounding boxes to 2D image plane, then publish the 2D bounding boxes to
-    Output topic: "detection_image"
-"""
 import cv2
 import message_filters
 import norfair
-import numpy as np
 import rospy
+import numpy as np
 from cv_bridge import CvBridge
 from norfair.drawing import Drawable
 from sensor_msgs.msg import Image
@@ -38,19 +31,29 @@ def align_image_and_bbox_coordinates(points, R, t):
 
 class DetectionImage:
     def __init__(self):
-        self.bridge = CvBridge()
-        self.image_topic = "/robot/k4a_bottom/rgb_to_depth/image_raw"
-        self.detection_topic = "/robot/k4a_bottom/rgbd_yolo_9dof_ros/bboxes3d"
+        # Load parameters
+        detection_visualizer = rospy.get_param("detection_visualizer")
+        self.image_topic = detection_visualizer["image"]["topic"]
+        self.detection_topic = detection_visualizer["detection"]["topic"]
+
         self.image_sub = message_filters.Subscriber(self.image_topic, Image)
         self.detections_sub = message_filters.Subscriber(self.detection_topic, BoundingBoxArray)
         self.image_pub = rospy.Publisher("detection_image", Image, queue_size=10)
         self.ts = message_filters.ApproximateTimeSynchronizer([self.image_sub, self.detections_sub], 10, 0.5, allow_headerless=True)
         self.ts.registerCallback(self.callback)
-        #TODO: These are magic numbers, the image size is 1024x1024
-        # The R and t are got from `tf_echo`
-        self.projecter = PixelCoordinatesProjecter([1024,1024])
-        self.R = q_to_R([0.522, 0.528, -0.471, 0.476])
-        self.t = np.array([0.004, 0.004, -0.051])
+
+        self.bridge = CvBridge()
+
+        w, h = detection_visualizer["image"]["width"], detection_visualizer["image"]["height"]
+        self.projecter = PixelCoordinatesProjecter([w, h], focal_length_pixel=np.array([502.7643127441406,502.8880310058594]),
+                                                   principal_point_pixel=np.array([508.549560546875, 519.2774658203125]))
+        q = detection_visualizer["tf_between_topics"]["q"]
+        t = detection_visualizer["tf_between_topics"]["t"]
+        self.R = q_to_R(q)
+        self.t = np.array(t)
+
+        rospy.init_node("detection_image")
+        rospy.spin()
 
     def callback(self, image, bbox_array):
         # The frame is 1024x1024
@@ -69,10 +72,5 @@ class DetectionImage:
         )
         self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
 
-    def main(self):
-        rospy.spin()
-
 if __name__ == "__main__":
-    rospy.init_node("detection_image")
     detection_image = DetectionImage()
-    detection_image.main()
