@@ -32,9 +32,9 @@ def align_image_and_bbox_coordinates(points, R, t):
 class DetectionImage:
     def __init__(self):
         # Load parameters
-        detection_visualizer = rospy.get_param("detection_visualizer")
-        self.image_topic = detection_visualizer["image"]["topic"]
-        self.detection_topic = detection_visualizer["detection"]["topic"]
+        subscribed_params = rospy.get_param("subscribed_topics")
+        self.image_topic = subscribed_params["rgb_image"]["topic"]
+        self.detection_topic = subscribed_params["detection_bounding_box"]["topic"]
 
         self.image_sub = message_filters.Subscriber(self.image_topic, Image)
         self.detections_sub = message_filters.Subscriber(self.detection_topic, BoundingBoxArray)
@@ -44,11 +44,12 @@ class DetectionImage:
 
         self.bridge = CvBridge()
 
-        w, h = detection_visualizer["image"]["width"], detection_visualizer["image"]["height"]
-        self.projecter = PixelCoordinatesProjecter([w, h], focal_length_pixel=np.array([502.7643127441406,502.8880310058594]),
-                                                   principal_point_pixel=np.array([508.549560546875, 519.2774658203125]))
-        q = detection_visualizer["tf_between_topics"]["q"]
-        t = detection_visualizer["tf_between_topics"]["t"]
+        w, h = subscribed_params["rgb_image"]["width"], subscribed_params["rgb_image"]["height"]
+        fx, fy = subscribed_params["camera_info"]["fx"], subscribed_params["camera_info"]["fy"]
+        cx, cy = subscribed_params["camera_info"]["cx"], subscribed_params["camera_info"]["cy"]
+        self.projecter = PixelCoordinatesProjecter([w, h], focal_length_pixel = np.array([fx, fy]), principal_point_pixel = np.array([cx, cy]))
+        q = subscribed_params["tf_between_topics"]["q"]
+        t = subscribed_params["tf_between_topics"]["t"]
         self.R = q_to_R(q)
         self.t = np.array(t)
 
@@ -59,7 +60,6 @@ class DetectionImage:
         # The frame is 1024x1024
         frame = self.bridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
         # filp the image
-        frame = cv2.flip(frame, 1)
         bounding_boxes = []
         for bbox in bbox_array.boxes:
             points = get_points_from_boudning_box_msg(bbox)

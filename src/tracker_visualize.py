@@ -35,24 +35,23 @@ class TrackerImage:
         rospy.init_node("tracker_image")
 
         # Load parameters
-        tracker_visualizer = rospy.get_param("tracker_visualizer")
-        self.tracked_bounding_boxes_topic = tracker_visualizer["tracked"]["topic"]
-        self.image_topic = tracker_visualizer["image"]["topic"]
+        tracker_visualizer_params = rospy.get_param("tracker_visualizer")
+        subscribed_params = rospy.get_param("subscribed_topics")
+        self.tracked_bounding_boxes_topic = tracker_visualizer_params["input"]["topic"]
+        self.image_topic = subscribed_params["rgb_image"]["topic"]
         self.image_sub = message_filters.Subscriber(self.image_topic, Image)
         self.tracked_bounding_boxes_sub = message_filters.Subscriber(self.tracked_bounding_boxes_topic, BoundingBoxesMsg)
         self.ts = message_filters.ApproximateTimeSynchronizer([self.image_sub, self.tracked_bounding_boxes_sub], 10, 0.5, allow_headerless=True)
         self.ts.registerCallback(self.pipeline)
-        self.image_pub = rospy.Publisher(tracker_visualizer["output"]["topic"], Image, queue_size=10)
+        self.image_pub = rospy.Publisher(tracker_visualizer_params["output"]["topic"], Image, queue_size=10)
 
         # 3D to 2d images
-        w, h = tracker_visualizer["image"]["width"], tracker_visualizer["image"]["height"]
-        # K: [502.7643127441406, 0.0, 508.549560546875,
-        #       0.0, 502.8880310058594, 519.2774658203125,
-        #       0.0, 0.0, 1.0]
-        self.projecter = PixelCoordinatesProjecter([w, h], focal_length_pixel=np.array([502.7643127441406,502.8880310058594]),
-                                                   principal_point_pixel=np.array([508.549560546875, 519.2774658203125]))
-        q = tracker_visualizer["tf_between_topics"]["q"]
-        t = tracker_visualizer["tf_between_topics"]["t"]
+        w, h = subscribed_params["rgb_image"]["width"], subscribed_params["rgb_image"]["height"]
+        fx, fy = subscribed_params["camera_info"]["fx"], subscribed_params["camera_info"]["fy"]
+        cx, cy = subscribed_params["camera_info"]["cx"], subscribed_params["camera_info"]["cy"]
+        self.projecter = PixelCoordinatesProjecter([w, h], focal_length_pixel = np.array([fx, fy]), principal_point_pixel = np.array([cx, cy]))
+        q = subscribed_params["tf_between_topics"]["q"]
+        t = subscribed_params["tf_between_topics"]["t"]
         self.R = q_to_R(q)
         self.t = np.array(t)
 

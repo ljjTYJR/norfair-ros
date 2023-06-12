@@ -106,7 +106,7 @@ class PixelCoordinatesProjecter:
         """
 
         points_pixel = (points_eye[:, :2].T / points_eye[:, 2]).T
-        points_pixel *= self.focal_length_pixel * np.array([-1, 1])
+        points_pixel *= self.focal_length_pixel * np.array([1, 1])
         points_pixel += self.principal_point_pixel
 
         return points_pixel

@@ -27,8 +27,9 @@ class Tracker:
         )
 
         # Load parameters
+        subscribed_params = rospy.get_param("subscribed_topics")
         tracker = rospy.get_param("tracker")
-        self.detection_topic = tracker["detection"]["topic"]
+        self.detection_topic = subscribed_params["detection_bounding_box"]["topic"]
         self.tracked_bounding_boxes_topic = tracker["output"]["topic"]
         rospy.Subscriber(self.detection_topic, BoundingBoxArray, self.pipeline)
         self.pub = rospy.Publisher(self.tracked_bounding_boxes_topic, BoundingBoxesMsg, queue_size=10)

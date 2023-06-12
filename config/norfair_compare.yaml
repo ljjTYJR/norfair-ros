@@ -1,29 +1,27 @@
-detection_visualizer:
-  image:
-    topic: "/robot/k4a_bottom/rgb_to_depth/image_raw"
-    width: 1024
-    height: 1024
-  detection:
-    topic: "/robot/k4a_bottom/rgbd_yolo_9dof_ros/bboxes3d"
-  tf_between_topics:
-    q: [0.522, 0.528, -0.471, 0.476]
-    t: [0.004, 0.004, -0.051]
-
 tracker:
-  detection:
-    topic: "/robot/k4a_bottom/rgbd_yolo_9dof_ros/bboxes3d"
   output:
     topic: "tracked_bounding_boxes"
 
 tracker_visualizer:
-  image:
-    topic: "/robot/k4a_bottom/rgb_to_depth/image_raw"
-    width: 1024
-    height: 1024
-  tracked:
+  input:
     topic: "tracked_bounding_boxes"
   output:
     topic: "tracker_image"
+
+subscribed_topics:
+  camera_info:
+    fx: 487.7295837402344
+    fy: 487.5943908691406
+    cx: 514.3927001953125
+    cy: 384.86810302734375
+  rgb_image:
+    topic: "/robot/k4a_top/rgb/qhd/image"
+    width: 1024
+    height: 768
+    frame_id: ""
+  detection_bounding_box:
+    topic: "/robot/k4a_top/rgbd_yolo_9dof_ros/bboxes3d"
+    frame_id: ""
   tf_between_topics:
-    q: [0.522, 0.528, -0.471, 0.476]
-    t: [0.004, 0.004, -0.051]
+    q: [0.484, 0.506, -0.494, 0.515]
+    t: [-0.028, -0.003, -0.047]
