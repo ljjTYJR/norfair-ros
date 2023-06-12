@@ -1,6 +1,6 @@
 <launch>
     <!-- The ros nodes -->
-    <node pkg="norfair_ros" name="detection_visualizer" type="detection_visualize.py"   output="screen"/>
+    <!-- <node pkg="norfair_ros" name="detection_visualizer" type="detection_visualize.py"   output="screen"/> -->
     <node pkg="norfair_ros" name="tracker"              type="tracker.py"               output="screen"/>
     <node pkg="norfair_ros" name="tracker_visualizer"   type="tracker_visualize.py"     output="screen"/>
 
