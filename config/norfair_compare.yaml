@@ -19,8 +19,8 @@ subscribed_topics:
     width: 1024
     height: 768
     frame_id: ""
-  detection_bounding_box:
-    topic: "/robot/k4a_top/rgbd_yolo_9dof_ros/bboxes3d"
+  detection_scenes_objects:
+    topic: "/perception/scene_objects"
     frame_id: ""
   tf_between_topics:
     q: [0.484, 0.506, -0.494, 0.515]

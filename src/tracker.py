@@ -5,12 +5,13 @@ Use the norfair tracker to track objects by their bounding boxes.
 import norfair
 import numpy as np
 import rospy
+import tf2_ros
 from norfair import Detection, Tracker
-from jsk_recognition_msgs.msg import BoundingBoxArray
-from norfair_ros.msg import BoundingBoxes as BoundingBoxesMsg
-from norfair_ros.msg import BoundingBox as BoundingBoxMsg
 from norfair_ros.msg import Point
-from utils import get_points_from_boudning_box_msg, scaled_euclidean
+from norfair_ros.msg import Detections as DetectionsMsg
+from darko_perception_msgs.msg import SceneObjects, SceneObject
+from utils import scaled_euclidean, get_pose_and_extents_from_points
+import tf2_geometry_msgs
 
 class Tracker:
     def __init__(self) -> None:
@@ -27,34 +28,71 @@ class Tracker:
         )
 
         # Load parameters
-        subscribed_params = rospy.get_param("subscribed_topics")
-        tracker = rospy.get_param("tracker")
-        self.detection_topic = subscribed_params["detection_bounding_box"]["topic"]
-        self.tracked_bounding_boxes_topic = tracker["output"]["topic"]
-        rospy.Subscriber(self.detection_topic, BoundingBoxArray, self.pipeline)
-        self.pub = rospy.Publisher(self.tracked_bounding_boxes_topic, BoundingBoxesMsg, queue_size=10)
+        subscribed_topic = rospy.get_param("tracker")["bounding_box_topic"]
+        published_topic = rospy.get_param("published_topics")["tracked_scene_objects"]
+        rospy.Subscriber(subscribed_topic, DetectionsMsg, self.pipeline)
+        self.pub = rospy.Publisher(published_topic, SceneObjects, queue_size=10)
+        self.map_frame = rospy.get_param("frame_setting")["map_frame"]
+        self.detection_frame = rospy.get_param("frame_setting")["detection_frame"]
+        self.tf_buffer = tf2_ros.Buffer()
 
         rospy.spin()
 
-    def pipeline(self, bboxes: BoundingBoxArray) -> None:
+    def get_transform_between_frames(self, src: str, tgt: str) -> np.ndarray:
+        """
+        Get the transform between two frames.
+
+        Parameters
+        ----------
+        src : str
+            Source frame.
+        tgt : str
+            Target frame.
+
+        Returns
+        -------
+        np.ndarray
+            Transform between the two frames.
+        """
+        try:
+            # TODO: The time should be from the message or now?
+            transform = self.tf_buffer.lookup_transform(src, tgt, rospy.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logerr(f"Cannot get transform from {src} to {tgt}.")
+            return None
+
+        return transform
+
+    def pipeline(self, detections_msg: DetectionsMsg) -> None:
         detections = []
-        for bbox in bboxes.boxes:
+        for detection in detections_msg.detections:
             detections.append(
                 Detection(
-                    points=get_points_from_boudning_box_msg(bbox),
+                    points = np.array([point.point for point in detection.points]),
                 )
             )
         tracked_objects = self.tracker.update(detections)
-        # Get the points of the tracked objects and save in the bounding box message
-        bounding_boxes_msg = BoundingBoxesMsg()
-        bounding_boxes_msg.header = bboxes.header
+        objects = []
+
         for tracked_object in tracked_objects:
-            bounding_boxes_msg.bounding_boxes.append(
-                BoundingBoxMsg(
-                    points = [Point(point=point) for point in tracked_object.estimate],
+            points = [point for point in tracked_object.estimate]
+            pose_, extents_ = get_pose_and_extents_from_points(points)
+
+            transform = self.get_transform_between_frames(self.map_frame, self.detection_frame)
+            if transform is not None:
+                pose_ = tf2_geometry_msgs.do_transform_pose(pose_, transform)
+            else:
+                rospy.logerr("Cannot get transform from map to detection frame.")
+
+            objects.append(
+                SceneObject(
+                    pose = pose_,
+                    extents = extents_,
                 )
             )
-        self.pub.publish(bounding_boxes_msg)
+        scene_objects_msg = SceneObjects(objects = objects)
+
+        self.pub.publish(scene_objects_msg)
 
 if __name__ == "__main__":
     try:

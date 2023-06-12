@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 
 from norfair import Palette
-from jsk_recognition_msgs.msg import BoundingBox
+from geometry_msgs.msg import Pose, Quaternion, Vector3, Point
+
+from scipy.spatial.transform import Rotation
 
 # 16: every two points are connected to form a line
 # CONNECTED_INDEXES = [1, 2, 4, 3, 1, 5, 7, 3, 7, 8, 6, 5, 6, 2, 4, 8]
@@ -204,7 +206,7 @@ def quaterion_to_rotation_matrix(q):
 
     return R
 
-def pose_dimensions_to_bounding_box_points(pose, dimensions):
+def pose_extents_to_keypoints(pose, dimensions):
     """
     Takes a Pose and dimensions and returns the 8 points of the bounding box
     p0: center of the box
@@ -242,5 +244,24 @@ def pose_dimensions_to_bounding_box_points(pose, dimensions):
     p8 = np.matmul(R, np.array([xmin, ymax, zmax])) + T
     return np.array([p0, p1, p2, p3, p4, p5, p6, p7, p8])
 
-def get_points_from_boudning_box_msg(bbox : BoundingBox):
-    return pose_dimensions_to_bounding_box_points(bbox.pose, bbox.dimensions)
+def get_points_from_norfair_msg(detection):
+    return pose_extents_to_keypoints()
+
+def get_pose_and_extents_from_points(points):
+    """
+    The inverse of pose_extents_to_keypoints
+    """
+    # get the center
+    p0 = points[0]
+    # get the dimensions
+    dimensions = np.array([np.linalg.norm(points[1] - points[2]), np.linalg.norm(points[1] - points[4]), np.linalg.norm(points[1] - points[5])])
+    # get the rotation
+    R = np.array([
+        (points[2] - points[1]) / dimensions[0],
+        (points[4] - points[1]) / dimensions[1],
+        (points[5] - points[1]) / dimensions[2]
+    ])
+    q = Rotation.from_matrix(R).as_quat()
+    # get the translation
+    t = p0
+    return Pose(position=Point(x=t[0], y=t[1], z=t[2]), orientation=Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])), Vector3(x=dimensions[0], y=dimensions[1], z=dimensions[2])

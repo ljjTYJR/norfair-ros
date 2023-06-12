@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
-from norfair_ros.msg import BoundingBoxes
 from norfair_ros.msg import Detection as DetectionMsg
 from norfair_ros.msg import Detections as DetectionsMsg
 from norfair_ros.msg import Point
-from jsk_recognition_msgs.msg import BoundingBoxArray
-from jsk_recognition_msgs.msg import BoundingBox
+from darko_perception_msgs.msg import SceneObjects
+from utils import pose_extents_to_keypoints
 
 class Converter:
     """
-    The Converter class is a ROS node that converts different input messages to a norfair_ros input message.
+    The Converter class is a ROS node that converts different input a standard bounding box message.
     """
 
-    def boundingboxes_to_norfair(self, bounding_boxes: BoundingBoxArray) -> None:
+    def scene_objects_to_norfair(self, scene_objects: SceneObjects) -> None:
         """
         Convert SceneObjects message to DetectionsMsg message.
 
@@ -23,21 +22,21 @@ class Converter:
             SceneObjects message from `/perception/scene_objects`.
         """
         detections = []
-        for bb in bounding_boxes.boxes:
+        for so in scene_objects.objects:
             detections.append(
                 DetectionMsg(
                     id = 0,
-                    label = str(bb.label),
-                    points = centroid_to_bounding_box(bb.pose, bb.dimensions),
+                    label = str(so.class_label),
+                    points = [Point([p[0], p[1], p[2]]) for p in pose_extents_to_keypoints(so.pose.pose, so.extents)],
                     # scores=[so.confidence, so.confidence],
-                    orientation = bb.pose.orientation,
-                    dimensions = bb.dimensions,
-                    position = bb.pose.position,
+                    orientation = so.pose.pose.orientation,
+                    position = so.pose.pose.position,
+                    extents = so.extents,
                 )
             )
 
         detections_msg = DetectionsMsg()
-        detections_msg.header = bounding_boxes.header
+        detections_msg.header = scene_objects.header
         detections_msg.detections = detections
 
         self.converter_publisher.publish(detections_msg)
@@ -45,20 +44,15 @@ class Converter:
     def main(self) -> None:
         rospy.init_node("converter")
 
-        # Load parameters
-        subscribers = rospy.get_param("converter_subscribers")
-        publishers = rospy.get_param("converter_publishers")
-        darko_detector = subscribers["jsk"]
-        output = publishers["output"]
+        subscribed_topic = rospy.get_param("subscribed_topics")["input_scene_objects"]
+        published_topic = rospy.get_param("tracker")["bounding_box_topic"]
 
-        # ROS subscriber definition
-        rospy.Subscriber(darko_detector["topic"], BoundingBoxArray, self.boundingboxes_to_norfair)
+        rospy.Subscriber(subscribed_topic, SceneObjects, self.scene_objects_to_norfair)
         self.converter_publisher = rospy.Publisher(
-            output["topic"], DetectionsMsg, queue_size=output["queue_size"]
+            published_topic, DetectionsMsg, queue_size = 10
         )
 
         rospy.spin()
-
 
 if __name__ == "__main__":
     try:

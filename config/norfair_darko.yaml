@@ -1,0 +1,12 @@
+subscribed_topics:
+  input_scene_objects: "/perception/scene_objects"
+
+tracker:
+  bounding_box_topic: "tracked_bounding_boxes"
+
+published_topics:
+  tracked_scene_objects: "/mapping/scene_objects"
+
+frame_setting:
+  map_frame: "world"
+  detection_frame: "robot_k4a_top_gravity_link"

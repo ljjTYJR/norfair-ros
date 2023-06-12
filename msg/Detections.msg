@@ -1,3 +1,2 @@
-Header header
-Header image_header
+Header      header
 Detection[] detections
